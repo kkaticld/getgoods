@@ -22,7 +22,9 @@
 - AI：OpenRouter API (Gemini)
 - 其他：marked (Markdown 解析)
 
-## 安装使用
+## 安装和部署
+
+### 本地开发
 
 1. 克隆仓库
 ```bash
@@ -43,11 +45,30 @@ OPENROUTER_API_KEY=your_api_key
 
 4. 启动服务器
 ```bash
-node server.js
+npm run dev
 ```
 
 5. 访问应用
 打开浏览器访问 http://localhost:3000
+
+### Railway 部署
+
+1. Fork 这个仓库到你的 GitHub 账号
+
+2. 在 Railway.app 上部署：
+   - 注册 Railway 账号并连接 GitHub
+   - 创建新项目，选择 GitHub 仓库
+   - 添加环境变量：
+     * OPENROUTER_API_KEY=your_api_key
+   - Railway 会自动部署应用
+
+3. 域名设置：
+   - Railway 会自动分配一个域名
+   - 可以在项目设置中配置自定义域名
+
+4. 自动部署：
+   - 推送到 main 分支会自动触发部署
+   - 可以在 Railway 仪表板查看部署状态和日志
 
 ## 使用说明
 

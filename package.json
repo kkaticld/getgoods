@@ -1,9 +1,12 @@
 {
-  "name": "menu-analysis",
+  "name": "getgoods",
   "version": "1.0.0",
-  "description": "AI-powered menu analysis system",
+  "description": "Food ingredients analysis tool with AI support",
   "main": "server.js",
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
