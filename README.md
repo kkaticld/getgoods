@@ -53,6 +53,10 @@ npm run dev
 
 ### Railway 部署
 
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/m3DVmj?referralCode=FX2Jus)
+
+或者手动部署：
+
 1. Fork 这个仓库到你的 GitHub 账号
 
 2. 在 Railway.app 上部署：
