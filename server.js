@@ -8,7 +8,11 @@ import { marked } from 'marked';
 
 // 配置marked选项
 marked.setOptions({
-    breaks: true // 将换行符转换为<br>
+    breaks: true, // 将换行符转换为<br>
+    gfm: true,    // 启用 GitHub 风格的 markdown
+    pedantic: false,
+    mangle: false,
+    headerIds: false
 });
 
 // 加载环境变量
@@ -30,6 +34,51 @@ app.use(express.static(__dirname));
 app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
 });
+
+// 辅助函数
+function parseIngredientData(content) {
+    const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
+    if (!jsonMatch) {
+        throw new Error('无法解析配料信息');
+    }
+
+    const parsedData = JSON.parse(jsonMatch[1]);
+    if (!parsedData.description || !parsedData.usage || !parsedData.nutrition || !parsedData.reason || !parsedData.impact) {
+        throw new Error('返回的数据格式不正确');
+    }
+
+    return parsedData;
+}
+
+function processMarkdownContent(parsedData) {
+    const processedContent = {};
+    for (const [key, value] of Object.entries(parsedData)) {
+        const cleanText = value.replace(/\\n/g, '\n').replace(/\\\"/g, '"');
+        processedContent[key] = marked(cleanText);
+    }
+    return processedContent;
+}
+
+function generateHtml(processedContent) {
+    return `
+        <div class="ingredient-info">
+            <h3>简介</h3>
+            ${processedContent.description}
+            
+            <h3>用途</h3>
+            ${processedContent.usage}
+            
+            <h3>营养价值</h3>
+            ${processedContent.nutrition}
+            
+            <h3>添加原因</h3>
+            ${processedContent.reason}
+            
+            <h3>不添加的影响</h3>
+            ${processedContent.impact}
+        </div>
+    `;
+}
 
 async function analyzeImageWithAI(imageData) {
     try {
@@ -127,8 +176,9 @@ async function analyzeImageWithAI(imageData) {
 }
 
 async function getIngredientInfo(ingredient) {
+    console.log('Requesting ingredient info from OpenRouter API...');
+    
     try {
-        console.log('Requesting ingredient info from OpenRouter API...');
         const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -155,84 +205,24 @@ async function getIngredientInfo(ingredient) {
             })
         });
 
-        const responseData = await response.text();
-        console.log('Raw Ingredient Info Response:', responseData);
-
         if (!response.ok) {
-            throw new Error(`API request failed: ${response.statusText}\n${responseData}`);
+            const errorText = await response.text();
+            throw new Error(`API request failed: ${response.statusText}\n${errorText}`);
         }
 
-        const data = JSON.parse(responseData);
-        console.log('Parsed Ingredient Info Response:', JSON.stringify(data, null, 2));
-
-        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+        const data = await response.json();
+        if (!data.choices?.[0]?.message?.content) {
             throw new Error('Invalid API response format');
         }
 
-        let content = data.choices[0].message.content;
+        const content = data.choices[0].message.content;
         console.log('AI Response Content:', content);
 
-        // 将markdown和换行转换为HTML
-        const htmlContent = marked(content);
-        console.log('Converted HTML Content:', htmlContent);
+        const parsedData = parseIngredientData(content);
+        const processedContent = processMarkdownContent(parsedData);
+        const html = generateHtml(processedContent);
 
-        // 尝试从返回的内容中提取JSON字符串
-        const match = content.match(/\{[\s\S]*\}/);
-        if (!match) {
-            throw new Error('无法解析配料信息');
-        }
-
-        // 验证JSON格式
-        try {
-            const info = JSON.parse(match[0]);
-            if (!info.description || !info.usage || !info.nutrition || !info.reason || !info.impact) {
-                throw new Error('返回的数据格式不正确');
-            }
-
-            // 为每个字段单独处理markdown格式
-            // 移除JSON字符串中的转义字符，以便正确解析markdown
-            const cleanInfo = {
-                description: info.description.replace(/\\n/g, '\n').replace(/\\\"/g, '"'),
-                usage: info.usage.replace(/\\n/g, '\n').replace(/\\\"/g, '"'),
-                nutrition: info.nutrition.replace(/\\n/g, '\n').replace(/\\\"/g, '"'),
-                reason: info.reason.replace(/\\n/g, '\n').replace(/\\\"/g, '"'),
-                impact: info.impact.replace(/\\n/g, '\n').replace(/\\\"/g, '"')
-            };
-
-            const formattedInfo = {
-                description: marked(cleanInfo.description),
-                usage: marked(cleanInfo.usage),
-                nutrition: marked(cleanInfo.nutrition),
-                reason: marked(cleanInfo.reason),
-                impact: marked(cleanInfo.impact)
-            };
-
-            return {
-                data: info,
-                html: `
-                    <div class="ingredient-info">
-                        <h3>简介</h3>
-                        ${formattedInfo.description}
-                        
-                        <h3>用途</h3>
-                        ${formattedInfo.usage}
-                        
-                        <h3>营养价值</h3>
-                        ${formattedInfo.nutrition}
-                        
-                        <h3>添加原因</h3>
-                        ${formattedInfo.reason}
-                        
-                        <h3>不添加的影响</h3>
-                        ${formattedInfo.impact}
-                    </div>
-                `
-            };
-        } catch (parseError) {
-            console.error('JSON Parse Error:', parseError);
-            throw new Error('无法解析AI返回的JSON数据');
-        }
-
+        return { data: parsedData, html };
     } catch (error) {
         console.error('Ingredient Info Error:', error);
         throw new Error('获取配料信息失败：' + error.message);
