@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>配料表识别系统</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>配料表识别系统</h1>
+        <div class="upload-section">
+            <label for="menuUpload" class="upload-label">
+                <span>点击或拖拽上传商品配料表图片</span>
+                <input type="file" id="menuUpload" accept="image/*">
+            </label>
+            <div id="preview" class="preview-section"></div>
+        </div>
+        <div id="results" class="results-section">
+            <div class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>正在分析配料表...</p>
+            </div>
+            <div id="dishList" class="ingredients-list"></div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
